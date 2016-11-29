@@ -11,6 +11,7 @@
 # typeOfTranscript="kallisto/salmon" 
 # t2g="transcript2geneFile" 
 # output="outputFile"
+#R CMD BATCH --vanilla '--args module="tximport" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest"' ~/001_Projects/ToolBox/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.Rout
 
 # usage for dgeAnalysis:
 # /software/R-3.3.0/bin/R CMD BATCH --vanilla '--args '
@@ -81,6 +82,12 @@ if(length(args)==0){
     }
 }
 
+print(module) 
+# pathToDir="" 
+# pathTosampleFile="" 
+# typeOfTranscript="" 
+# t2g="" 
+# output=""
 
 
 ### This part was writen at the beginning, but now I have the files so it's easy/fast to load them. I'll keep it in the case of updated data needed
@@ -130,10 +137,11 @@ txImportData = function(pathToDir, pathTosampleFile, typeOfTranscript, t2g, toRe
   }
   
   KallistoTximport = tximport(files, type = typeOfTranscript, tx2gene = t2g, reader = read_tsv)
+  colnames(KallistoTximport$counts) = pathTosampleFile$Sample_ID1
   return(KallistoTximport)
 }
 
-## import data edgeR
+## import data counts Matrix for DGE analysis
 dgeImportData = function(dataFromTxImportData, pathTosampleFile, offset=c("txImport, calcNormFactors", "both", "none"), cpmToFilter=5, samplesToFilter=4, package=c("edgeR, deseq2, limma"), CountToRemove=0, meanCounts=0, outplots=NULL, method="", rounds = 0, contrast=FALSE, onlyVoom=FALSE, plots=FALSE, allSample="all"){
   print("Importing tximport into edgeR and calculate offset")
   #Calculate offset 1
@@ -404,315 +412,6 @@ if (CountToRemove > 0 ){
 }
 
 
-
-
-# Calculate MDS, Biological Coefficiente of Variation and dispersion
-mdsAndDispersion = function(edgeRobject, pathTosampleFile, outputdir, outputfile, makePlots=FALSE, qlf=FALSE, edgeRobjectMatrix=NULL, outputBCV_MDS=FALSE){
-
-  print("Calculating first 10 PCs")
-  if(class(edgeRobject)[1] == "DGEList"){
-    print("edgeRobject is a DGEList")
-  } else{
-    print("edgeRobject is not a DGEList")
-    break()
-  }
-  edgeRobject = calcNormFactors(edgeRobject) # is not necessary if the edgeRobject comes from the previous function.... but just in case. Doesn't affect if has been previously calculated
-  pathTosampleFile = fread(pathTosampleFile)
-  edgeRobject$samples$group = pathTosampleFile$Group
-  print(head(edgeRobject$samples))
-
-# pathTosampleFile = fread("/lustre/scratch115/projects/pneumo-inf/listSeqFiles.Nasal")
-
-  if(!is.null(edgeRobjectMatrix)){
-    print("DesignMatrix pre-constructed. The matrix looks like this:")
-    } else {
-    print ("edgeRobjectMatrix not pre-constructed. Check in the script if the Matrix is correct in line 157")
-    edgeRobjectMatrix = model.matrix(~0+pathTosampleFile$Tissue+pathTosampleFile$Condition+pathTosampleFile$Tissue:pathTosampleFile$Condition)
-    colnames(edgeRobjectMatrix) = c("blood", "nasal", "Condit.P2", "Inter_Nasal.P2")
-    rownames(edgeRobjectMatrix) <- colnames(edgeRobject)
-  }
-  # edgeRobjectMatrix = model.matrix(~0+pathTosampleFile$Group)
-    print(head(edgeRobjectMatrix))
-
-  edgeRobject = estimateDisp(edgeRobject, edgeRobjectMatrix, robust=TRUE)
-
-  if(outputBCV_MDS){
-  print("Calculating and plotting dispersion")
-  edgeRobjectMDS = plotMDS(edgeRobject, dim.plot=c(1,10))
-  print(edgeRobjectMDS$cmdscale.out[1:10,1:10])
-  write.table(edgeRobjectMDS$cmdscale.out, file=paste(outputdir, outputfile, ".mds.txt", sep=''), col.names=T, row.names=T, quote=F, sep='\t')
-  sink(paste(outputdir, outputfile, ".BCV.txt", sep=''))
-  print("CV")
-  print(edgeRobject$common.dispersion)
-  print("BCV")
-  print(sqrt(edgeRobject$common.dispersion))
-  sink()
-  }
-
-  if(makePlots){
-    pdf(paste(outputdir, outputfile, ".DispersionPlots.pdf", sep=''))
-    plotBCV(edgeRobject, main="NB dispersion", pch=19, cex=0.8)
-     if(qlf){
-      edgeRobject.fit = glmQLFit(edgeRobject, edgeRobjectMatrix, robust=T)
-      print(head(edgeRobject.fit$coefficients))
-      plotQLDisp(edgeRobject.fit, main="QL Dispersion", pch=19, cex=0.8)
-    }
-    dev.off()
-}
-  return(edgeRobject)
-}
-
-# NOISeq Diagnostic plots
-noiseqPlots = function(edgeRobject ,genesGC, genesBiotype, genesChrStartEnd, genesLength, factor, outputdir, outputfile){
-  #genesBiotype = biomaRt::getBM(attributes = c("ensembl_gene_id", "gene_biotype"), mart=mart)
-  genesGC = fread(genesGC)
-  genesBiotype = fread(genesBiotype)
-  genesChrStartEnd = fread(genesChrStartEnd)
-  genesChrStartEnd2 =  as.data.frame(genesChrStartEnd[, !c("GeneNames"), with=FALSE])
-  rownames(genesChrStartEnd2) = genesChrStartEnd$GeneNames§
-  genesChrStartEnd = genesChrStartEnd2
-  rm(genesChrStartEnd2)
-  genesLength = fread(genesLength)
-  factor = fread(factor)
-  factorCondition = factor[[4]]
-  factorCondition = as.data.frame(factor[[4]])
-  colnames(factorCondition) = c("Condition")
-
-  edgeRobjectNoiseq = NOISeq::readData(data = edgeRobject$counts, length = genesLength, gc = genesGC, biotype = genesBiotype,  chromosome = genesChrStartEnd, factors = factorCondition)
-  QCreport(edgeRobjectNoiseq, file=paste(outputdir, outputfile, ".NOIseq.pdf", sep=""), factor = "Condition" )
-}
-
-###################
-###################
-###################
-# DGE analysis with edgeR - UNDER CONSTRUCTION - ADD THE SECTION SHOULD BE RE-CHECKED ###################
-# TO-ADD = type of test to run,
-dgeAnalysis = function(edgeRobject, pathTosampleFile, outputdir, outputfile, edgeRobjectMatrix=NULL, contrast=NULL, type=c("lrt", "qlf"), package="edgeR, deseq2"){
-
-  if(package == "edgeR"){
-    pathTosampleFile = fread(pathTosampleFile) # This file must contain the info about the design of the experiment. In our case, Tissue and Condition info.
-    print(head(pathTosampleFile))
-    edgeRobject$samples$group = pathTosampleFile$Group
-    print(head(edgeRobject$samples))
-
-    if(!is.null(edgeRobjectMatrix)){
-      print("DesignMatrix pre-constructed. The matrix looks like this:")
-      } else {
-      print ("edgeRobjectMatrix not pre-constructed. Check in the script if the Matrix is correct in line 157 and comment break()")
-      # break()
-      print("Building model matrix")
-      edgeRobjectMatrix = model.matrix(~0+pathTosampleFile$Tissue+pathTosampleFile$Condition+pathTosampleFile$Tissue:pathTosampleFile$Condition)
-      colnames(edgeRobjectMatrix) = c("blood", "nasal", "Condit.P2", "Inter_Nasal.P2")
-      rownames(edgeRobjectMatrix) <- colnames(edgeRobject)
-    }
-
-  print(head(edgeRobjectMatrix))
-
-    if(!is.null(contrast)){
-      print("Contrast pre-constructed. The contrast matrix looks like this:")
-      print(head(contrast))
-    } else {
-      print ("Contrast not pre-constructed. Check in the script if the Matrix is correct in line 236 and comment break()")
-      # break()
-    # print("Building contrasts")
-    # contrastToTest = makeContrasts(
-    #   bloodVsNasal_1 = C-A,
-    #   bloodVsNasal_2 = C-B,
-    #   bloodVsNasal_3 = D-A,
-    #   bloodVsNasal_4 = D-B,
-    #
-    #   nasalVsBlood_1 = A-C,
-    #   nasalVsBlood_2 = B-C,
-    #   nasalVsBlood_3 = A-D,
-    #   nasalVsBlood_4 = B-D,
-    #
-    #   tissueVsCondition_1 = B-A,
-    #   tissueVsCondition_2 = D-C,
-    #   tissueVsCondition_3 = ((C+D)/2)-((A+B)/2),
-    #
-    #   minus5_1 = A-B,
-    #   minus5_2 = C-D,
-    #   plus2_1 = B-A,
-    #   plus2_2 = D-C,
-    #
-    #   minus5VsPlus2_1 = ((B+D)/2)-((A+C)/2),
-    #   minus5VsPlus2_2 = (D-C)-(B-A),
-    #
-    #   levels =  levels(as.factor(c("A", "B", "C", "D")))
-    #   )
-  }
-
-
-      # print("Calculating DGE
-      if(type == "lrt"){
-      print("Calculating fit for LRT") ## ADD FITTING METHOD
-      edgeRobject.fit = glmFit(edgeRobject, edgeRobjectMatrix, robust=TRUE)
-      print("calculating LRT")
-      tissueVsCondition_1.lrt = glmLRT(edgeRobject.fit, coef=c(4))
-      return(tissueVsCondition_1.lrt)
-      # print("Done 1!")
-      # tissueVsCondition_1.lrt.dt = decideTestsDGE(tissueVsCondition_1.lrt)
-      # print("a")
-      # tissueVsCondition_1.lrt.isDE = as.logical(tissueVsCondition_1.lrt.dt)
-      # print("b")
-      # tissueVsCondition_1.lrt.DEnames = rownames(edgeRobject)[tissueVsCondition_1.lrt.isDE]
-      # print("c")
-
-          # tissueVsCondition_2.lrt = glmLRT(edgeRobject.fit, coef=c(2,3,4))
-          # print("Done 2!")
-          # tissueVsCondition_2.lrt.dt = decideTestsDGE(tissueVsCondition_2.lrt)
-          # tissueVsCondition_2.lrt.isDE = as.logical(tissueVsCondition_2.lrt.dt)
-          # tissueVsCondition_2.lrt.DEnames = rownames(edgeRobject)[tissueVsCondition_2.lrt.isDE]
-    } else if (type == "qlf"){
-      print("calculating QLF")
-      print("Calculating fit for QLF") ## ADD FITTING METHOD
-      edgeRobject.qlfit = glmQLFit(edgeRobject, edgeRobjectMatrix, robust=TRUE)
-      tissueVsCondition_1.qlf = glmQLFTest(edgeRobject.qlfit, coef=c(4))
-      return(tissueVsCondition_1.qlf)
-      # tissueVsCondition_1.qlf.dt = decideTestsDGE(tissueVsCondition_1.qlf)
-      # tissueVsCondition_1.qlf.isDE = as.logical(tissueVsCondition_1.qlf.dt)
-      # tissueVsCondition_1.qlf.DEnames = rownames(edgeRobject)[tissueVsCondition_1.qlf.isDE]
-
-      # tissueVsCondition_2.qlf = glmQLFTest(edgeRobject.qlfit, coef=c(2,3,4))
-      # tissueVsCondition_2.qlf.dt = decideTestsDGE(tissueVsCondition_2.qlf)
-      # tissueVsCondition_2.qlf.isDE = as.logical(tissueVsCondition_2.qlf.dt)
-      # tissueVsCondition_2.qlf.DEnames = rownames(edgeRobject)[tissueVsCondition_2.qlf.isDE]
-  }
-
-
-      # bloodVsNasal_1.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"bloodVsNasal_1"])
-      # bloodVsNasal_2.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"bloodVsNasal_2"])
-      # bloodVsNasal_3.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"bloodVsNasal_3"])
-      # bloodVsNasal_4.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"bloodVsNasal_4"])
-      #
-      # nasalVsBlood_1.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"nasalVsBlood_1"])
-      # nasalVsBlood_2.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"nasalVsBlood_2"])
-      # nasalVsBlood_3.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"nasalVsBlood_3"])
-      # nasalVsBlood_4.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"nasalVsBlood_4"])
-      #
-      # tissueVsCondition_1.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"tissueVsCondition_1"])
-      # tissueVsCondition_2.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"tissueVsCondition_2"])
-      # tissueVsCondition_3.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"tissueVsCondition_3"])
-
-      # minus5_1.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"minus5_1"])
-      # minus5_2.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"minus5_2"])
-      # plus2_1.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"plus2_1"])
-      # plus2_2.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"plus2_2"])
-      #
-      # minus5VsPlus2_1.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"minus5VsPlus2_1"])
-      # minus5VsPlus2_2.glm = glmLRT(edgeRobject.fit, contrast=contrastToTest[,"minus5VsPlus2_2"])
-      #########################################################
-
-      # print("Printing QQ Plot")
-      # qqplot.dge(minus5_1.glm, outName=outputfile)
-      #########################################################
-
-      if (outputPvals){  ### Check this!
-      print("Sinking")
-      sink("tissueVsCondition_1.lrt")
-      print(topTags(tissueVsCondition_1.lrt, dim(tissueVsCondition_1.lrt$table$PValue)[1]))
-      sink()
-      sink("tissueVsCondition_2.lrt")
-      print(topTags(tissueVsCondition_2.lrt, dim(tissueVsCondition_2.lrt$table$PValue)[1]))
-      sink()
-    }
-      if(plotSmearVolcano){### Check this!
-      pdf("smearPlot.LRT.postDGE.pdf")
-      print(plotSmear(tissueVsCondition_1.lrt, main="tissueVsCondition_1.lrt glmLRT post", pch=19, cex=0.8, de.tags=tissueVsCondition_1.lrt.DEnames))
-      print(plotSmear(tissueVsCondition_2.lrt, main="tissueVsCondition_2.lrt glmLRT post", pch=19, cex=0.8, de.tags=tissueVsCondition_2.lrt.DEnames))
-      dev.off()
-    }
-      # print("Sinking")
-      # sink("tissueVsCondition_1.qlf")
-      # print(topTags(tissueVsCondition_1.qlf, dim(tissueVsCondition_1.qlf$table$PValue)[1]))
-      # sink()
-      # sink("tissueVsCondition_2.qlf")
-      # print(topTags(tissueVsCondition_2.qlf, dim(tissueVsCondition_2.qlf$table$PValue)[1]))
-      # sink()
-      # pdf("smearPlot.QLF.postDGE.pdf")
-      # print(plotSmear(tissueVsCondition_1.qlf, main="tissueVsCondition_1.qlf glmLRT post", pch=19, cex=0.8, de.tags=tissueVsCondition_1.qlf.DEnames))
-      # print(plotSmear(tissueVsCondition_2.qlf, main="tissueVsCondition_2.qlf glmLRT post", pch=19, cex=0.8, de.tags=tissueVsCondition_2.qlf.DEnames))
-      # dev.off()
-
-      # sink("bloodVsNasal_1.glm.top100")
-      # print(topTags(bloodVsNasal_1.glm, 100))
-      # sink()
-      # sink("bloodVsNasal_2.glm.top100")
-      # print(topTags(bloodVsNasal_2.glm, 100))
-      # sink()
-      # sink("bloodVsNasal_3.glm.top100")
-      # print(topTags(bloodVsNasal_3.glm, 100))
-      # sink()
-      # sink("bloodVsNasal_4.glm.top100")
-      # print(topTags(bloodVsNasal_4.glm, 100))
-      # sink()
-      #
-      # sink("nasalVsBlood_1.glm.top100")
-      # print(topTags(bloodVsNasal_1.glm, 100))
-      # sink()
-      # sink("nasalVsBlood_2.glm.top100")
-      # print(topTags(bloodVsNasal_2.glm, 100))
-      # sink()
-      # sink("nasalVsBlood_3.glm.top100")
-      # print(topTags(bloodVsNasal_3.glm, 100))
-      # sink()
-      # sink("nasalVsBlood_4.glm.top100")
-      # print(topTags(bloodVsNasal_4.glm, 100))
-      # sink()
-      #
-      # sink("tissueVsCondition_1.glm.top100")
-      # print(topTags(tissueVsCondition_1.glm, 100 ))
-      # sink()
-      # sink("tissueVsCondition_2.glm.top100")
-      # print(topTags(tissueVsCondition_2.glm, 100 ))
-      # sink()
-      # sink("tissueVsCondition_3.glm.top100")
-      # print(topTags(tissueVsCondition_3.glm, 100 ))
-      # sink()
-      #
-      # sink("minus5_1.glm.top100")
-      # print(topTags(minus5_1.glm, 100))
-      # sink()
-      # sink("minus5_2.glm.top100")
-      # print(topTags(minus5_2.glm, 100))
-      # sink()
-      # sink("plus2_1.glm.top100")
-      # print(topTags(plus2_1.glm, 100))
-      # sink()
-      # sink("plus2_2.glm.top100")
-      # print(topTags(plus2_2.glm, 100))
-      # sink()
-      #
-      # sink("minus5VsPlus2_1.top100")
-      # print(topTags(minus5VsPlus2_1.glm, 100))
-      # sink()
-      # sink("minus5VsPlus2_2.top100")
-      # print(topTags(minus5VsPlus2_2.glm, 100))
-      # sink()
-      #########################################################
-    # rownames(edgeRobjectMatrix) = colnames(edgeRobject)
-    # print(head(edgeRobjectMatrix))
-    # edgeRobject.fit = glmQLFit(edgeRobject, edgeRobjectMatrix, robust=TRUE)
-    # edgeRobject.qlf = glmQLFTest(edgeRobject.fit)
-    # sink(paste(outputdir, outputfile, ".TopGenes.txt", sep=""))
-    # topTags(edgeRobject.qlf)
-    # sink()
-  } else if(package == "deseq2"){
-    if (type == "lrt"){
-      edgeRobject = DESeq(edgeRobject, test = "LRT", reduced=~1)
-      return(edgeRobject)
-      # edgeRobject.results = results(edgeRobject)
-      # return(edgeRobject.results)
-    } else {
-      edgeRobject = DESeq(edgeRobject)
-      return(edgeRobject)
-      # edgeRobject.results = results(edgeRobject)
-      # return(edgeRobject.results)
-    }
-    # dgeData.All.full.constras.res <- results(dgeData.All.full,contrast=list("TissueNasal.ConditionPlus2"))
-    # dgeData.All.full.constras.res.ordered = dgeData.All.full.constras.res[order(dgeData.All.full.constras.res$padj),]
-  }
-}
 ###################
 ###################
 ###################
@@ -883,6 +582,8 @@ if (module == "tximport"){
                pathTosampleFile=pathTosampleFile, 
                typeOfTranscript=typeOfTranscript, 
                t2g=t2g)
+
+  print(head(txDatatemp$counts))
 
   write.table(txDatatemp$counts, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
 
