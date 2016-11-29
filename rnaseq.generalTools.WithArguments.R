@@ -1,4 +1,36 @@
-#USAGE: bsub -q normal -G ichip -J allPC -R "select[mem>20000] rusage[mem=20000]" -M20000 -o /lustre/scratch115/projects/pneumo-inf/TranscriptCountFromfastqFiles.kallisto/allPCs.out -e /lustre/scratch115/projects/pneumo-inf/TranscriptCountFromfastqFiles.kallisto/allPCs.err /software/R-3.3.0/bin/R CMD BATCH --vanilla '--args pca="yes" ' /lustre/scratch115/projects/pneumo-inf/TranscriptCountFromfastqFiles.kallisto/sleuth_pca.tmp.R sleuth_pca.tmp.Rout
+#USAGE: bsub -q normal -G ichip -J allPC -R "select[mem>20000] rusage[mem=20000]" -M20000 -o /lustre/scratch115/projects/pneumo-inf/TranscriptCountFromfastqFiles.kallisto/allPCs.out -e /lustre/scratch115/projects/pneumo-inf/TranscriptCountFromfastqFiles.kallisto/allPCs.err /software/R-3.3.0/bin/R CMD BATCH --vanilla '--args Arg1="Value1" Arg2="Value2" Arg3="Value3" Arg4="Value4"' /FolderWithRscript/rnaseq.generalTools.R  /FolderForRout/file.Rout
+
+
+#### Example: for i in {2..22};do bsub -q normal -G ichip -J chr$i -R "select[mem>2000] rusage[mem=2000]" -M2000 -o chr$i.out -e chr$i.err /software/R-3.1.2/bin/R CMD BATCH --vanilla '--args toModif="/lustre/scratch113/projects/crohns/iibdgc_meta/IIBDGC/ibd/'$i'.assoc" pattern="/lustre/scratch113/projects/crohns/iibdgc_meta/GWAS3/ibd/'$i'.assoc" output="'$i'" which="only1"' /nfs/team152/javi/ToolBoox/ScriptsR/equalizeAllelesFreq.Katie.R equalizeAlleles.Katie.Chr$i.Rout;done
+
+# usage for txImportData: 
+# /software/R-3.3.0/bin/R CMD BATCH --vanilla '--args '
+# module="tximport" 
+# pathToDir="path/to/dir/with/files" 
+# pathTosampleFile="listOfSamples" 
+# typeOfTranscript="kallisto/salmon" 
+# t2g="transcript2geneFile" 
+# output="outputFile"
+
+# usage for dgeAnalysis:
+# /software/R-3.3.0/bin/R CMD BATCH --vanilla '--args '
+# module="dgeAnalysis"
+# dataFromTxImportData(counts Matrix if this function is used alone)
+# pathTosampleFile
+# offset=c("txImport, calcNormFactors", "both", "none")
+# cpmToFilter=5
+# samplesToFilter=4
+# package=c("edgeR, deseq2, limma")
+# CountToRemove=0
+# meanCounts=0
+# outplots=NULL
+# method=c("lm, robust")
+# rounds = 0
+# contrast=FALSE
+# onlyVoom=FALSE
+# plots=FALSE
+# allSample="all"
+# output="outputFile"
 
 library(ggplot2)
 library(batch)
@@ -15,14 +47,10 @@ library(data.table)
 library(dtplyr)
 library(DESeq2)
 library(pcaExplorer)
-# library(IHW)
-# library(ReportingTools)
-# library(vsn)
 library(pheatmap)
 library(RColorBrewer)
 library(calibrate)
 # source("/Users/jga/001_Projects/ToolBox/R/qq_plot_javi.R")
-# options(mc.cores = 6L)
 # args=(commandArgs(TRUE))
 
 # Determine default arguments
@@ -43,19 +71,17 @@ args=(commandArgs(TRUE))
 ##args is now a list of character vectors
 ## First check to see if arguments passed.
 ## Then cycle through each element of the list and evaluate the expressions.
-# if(length(args)==0){
-#         print("No arguments supplied.")
-#         ##supply default values
-#         break()
-# }else{
-#     for(i in 1:length(args)){
-#       eval(parse(text=args[[i]]))
-#     }
-# }
+if(length(args)==0){
+        print("No arguments supplied.")
+        ##supply default values
+        break()
+}else{
+    for(i in 1:length(args)){
+      eval(parse(text=args[[i]]))
+    }
+}
 
-# if(pca == "yes"){
-# print("Calculating and plotting PCs, Dispersion and other Dxs")
-# }
+
 
 ### This part was writen at the beginning, but now I have the files so it's easy/fast to load them. I'll keep it in the case of updated data needed
 # print("Retreiving data from Ensembl")
@@ -81,7 +107,7 @@ args=(commandArgs(TRUE))
 
 
 ## import data TXIMPORT
-txImportData = function(pathToDir, pathTosampleFile, typeOfTranscript, t2g){
+txImportData = function(pathToDir, pathTosampleFile, typeOfTranscript, t2g, toReturn=c("counts", "tpm", "rpkm")){
   print(paste("Importing", typeOfTranscript, "data using tximport from", pathToDir, sep=" "))
 
   if(is.data.frame(pathTosampleFile)){
@@ -102,7 +128,8 @@ txImportData = function(pathToDir, pathTosampleFile, typeOfTranscript, t2g){
   } else if (typeOfTranscript == "salmon") {
   files =  file.path(pathToDir, pathTosampleFile$Sample_ID1, "quant.sf")
   }
-    KallistoTximport = tximport(files, type = typeOfTranscript, tx2gene = t2g, reader = read_tsv)
+  
+  KallistoTximport = tximport(files, type = typeOfTranscript, tx2gene = t2g, reader = read_tsv)
   return(KallistoTximport)
 }
 
@@ -353,7 +380,7 @@ if (CountToRemove > 0 ){
   # qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="CarrierStatusNaturalNonCarrier")$P.Value, outplots)
   # qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="CarrierStatusExperimentalNonCarrier")$P.Value, outplots)
   dev.off()
-  return(forDgeData.ebayes)
+  return(forDgeData.ebayes.df)
 
     # forDgeData <- voom(forDgeData, designMatrix, plot=TRUE,  lib.size=colSums(counts)*nf$samples$norm.factors)
     # forDgeData = calcNormFactors(forDgeData)
@@ -376,7 +403,8 @@ if (CountToRemove > 0 ){
 
 }
 
-# DESeq2ImportData = function(dataFromTxImportData)
+
+
 
 # Calculate MDS, Biological Coefficiente of Variation and dispersion
 mdsAndDispersion = function(edgeRobject, pathTosampleFile, outputdir, outputfile, makePlots=FALSE, qlf=FALSE, edgeRobjectMatrix=NULL, outputBCV_MDS=FALSE){
@@ -441,7 +469,7 @@ noiseqPlots = function(edgeRobject ,genesGC, genesBiotype, genesChrStartEnd, gen
   genesBiotype = fread(genesBiotype)
   genesChrStartEnd = fread(genesChrStartEnd)
   genesChrStartEnd2 =  as.data.frame(genesChrStartEnd[, !c("GeneNames"), with=FALSE])
-  rownames(genesChrStartEnd2) = genesChrStartEnd$GeneNames
+  rownames(genesChrStartEnd2) = genesChrStartEnd$GeneNames§
   genesChrStartEnd = genesChrStartEnd2
   rm(genesChrStartEnd2)
   genesLength = fread(genesLength)
@@ -454,7 +482,10 @@ noiseqPlots = function(edgeRobject ,genesGC, genesBiotype, genesChrStartEnd, gen
   QCreport(edgeRobjectNoiseq, file=paste(outputdir, outputfile, ".NOIseq.pdf", sep=""), factor = "Condition" )
 }
 
-# DGE analysis with edgeR - UNDER CONSTRUCTION
+###################
+###################
+###################
+# DGE analysis with edgeR - UNDER CONSTRUCTION - ADD THE SECTION SHOULD BE RE-CHECKED ###################
 # TO-ADD = type of test to run,
 dgeAnalysis = function(edgeRobject, pathTosampleFile, outputdir, outputfile, edgeRobjectMatrix=NULL, contrast=NULL, type=c("lrt", "qlf"), package="edgeR, deseq2"){
 
@@ -682,7 +713,10 @@ dgeAnalysis = function(edgeRobject, pathTosampleFile, outputdir, outputfile, edg
     # dgeData.All.full.constras.res.ordered = dgeData.All.full.constras.res[order(dgeData.All.full.constras.res$padj),]
   }
 }
-
+###################
+###################
+###################
+# DGE analysis with edgeR - UNDER CONSTRUCTION - ADD THE SECTION SHOULD BE RE-CHECKED ###################
 
 testCPM = function(output, dataFromTxImportData, samplesToFilter, filterRange){
   # Quick evaluation to determine the threshold of genes to remove because of low counts
@@ -796,3 +830,104 @@ rpkm2tpm = function(data){
 
   return(matrixToFill)
 }
+
+# QQ plot
+
+qqplotFunction = function(pvalues, title){
+  PVAL=-log10(pvalues)
+  N <- length(PVAL) ## number of p-values
+
+  ## create the null distribution
+  ## (-log10 of the uniform)
+  null <- -log(1:N/N,10)
+  MAX <- max(c(PVAL,null),na.rm=T)
+
+
+  ## create the confidence intervals
+  c95 <- rep(0,N)
+  c05 <- rep(0,N)
+
+  ## the jth order statistic from a
+  ## uniform(0,1) sample
+  ## has a beta(j,n-j+1) distribution
+  ## (Casella & Berger, 2002,
+  ## 2nd edition, pg 230, Duxbury)
+
+  for(i in 1:N){
+    c95[i] <- qbeta(0.95,i,N-i+1)
+    c05[i] <- qbeta(0.05,i,N-i+1)
+  }
+
+  ## plot the two confidence lines
+  plot(null, -log(c95,10), ylim=c(0,MAX), xlim=c(0,MAX), type="l",lty=2,
+  axes=FALSE, xlab="", ylab="")
+  par(new=T)
+  plot(null, -log(c05,10), ylim=c(0,MAX), xlim=c(0,MAX), type="l", lty=2,
+  axes=FALSE, xlab="", ylab="")
+  ## add the diagonal
+  abline(0,1,col="red",lwd=2)
+  par(new=T)
+
+  ## add the qqplot
+  qqplot(null,PVAL, ylim=c(0,MAX),xlim=c(0,MAX), pch=19,main=title,
+  xlab=expression(paste("Theoretical ", -log[10](italic(p)))), ylab= expression(paste("Observed ",-log[10](italic(p)))))
+
+  #END
+}
+
+#############################################################################################################################
+
+if (module == "tximport"){
+
+  txDatatemp = txImportData(pathToDir=pathToDir, 
+               pathTosampleFile=pathTosampleFile, 
+               typeOfTranscript=typeOfTranscript, 
+               t2g=t2g)
+
+  write.table(txDatatemp$counts, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
+
+} else if (module == "dgeAnalysis"){
+
+  dgeAnalysisTemp = dgeAnalysis(dataFromTxImportData=dataFromTxImportData, 
+              pathTosampleFile=pathTosampleFile, 
+              offset=offset, 
+              cpmToFilter=cpmToFilter, 
+              samplesToFilter=samplesToFilter, 
+              package=package, 
+              CountToRemove=0, 
+              meanCounts=0, 
+              outplots=NULL, 
+              method=method, 
+              rounds = 1, 
+              contrast=FALSE, 
+              onlyVoom=FALSE, 
+              plots=FALSE, 
+              allSample="all")
+
+ write.table(dgeAnalysisTemp, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
+
+} else if (module == "importAndAnalysis"){
+  txDataTemp = txImportData(pathToDir=pathToDir, 
+               pathTosampleFile=pathTosampleFile, 
+               typeOfTranscript=typeOfTranscript, 
+               t2g=t2g)
+
+  dgeAnalysis(dataFromTxImportData=txDataTemp, 
+              pathTosampleFile=pathTosampleFile, 
+              offset=offset, 
+              cpmToFilter=cpmToFilter, 
+              samplesToFilter=samplesToFilter, 
+              package=package, 
+              CountToRemove=0, 
+              meanCounts=0, 
+              outplots=NULL, 
+              method=method, 
+              rounds = 1, 
+              contrast=FALSE, 
+              onlyVoom=FALSE, 
+              plots=FALSE, 
+              allSample="all")
+
+  write.table(dgeAnalysisTemp, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
+}
+
