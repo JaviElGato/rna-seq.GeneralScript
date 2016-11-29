@@ -51,7 +51,6 @@ library(pcaExplorer)
 library(pheatmap)
 library(RColorBrewer)
 library(calibrate)
-# source("/Users/jga/001_Projects/ToolBox/R/qq_plot_javi.R")
 # args=(commandArgs(TRUE))
 
 # Determine default arguments
