@@ -32,6 +32,7 @@
 # plots=FALSE
 # allSample="all"
 # output="outputFile"
+#R CMD BATCH --vanilla '--args module="importAndAnalysis" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest.dgeAnal" method="ls" package="limma" plots="FALSE" allSample="nasal" offset="none" rounds=1 cpmToFilter=5 samplesToFilter=4' ~/001_Projects/ToolBox/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.dgeAnal.Rout
 
 library(ggplot2)
 library(batch)
@@ -285,16 +286,18 @@ if (CountToRemove > 0 ){
       # forDgeData$sample$group = pathTosampleFile$CarrierStatusAll
       # forDgeData$sample$group = pathTosampleFile$Condition
       ### Close Matrix for Nasal or Blood subset ########################################
-      if(allSample == "nasal") {
-      plotMDS(forDgeData, labels=1:24, col=as.numeric(as.factor(forDgeData$sample$group)), main="MDS plot vaccines pilot Nasal (Excluding Exp. Carriers)") #Excluding Nat. Carriers #Only Exp. Indvs
-      # legend("topleft", legend=c("M5-NonCarrier", "P2-NonCarrier", "P2-Carrier"), pch=15, col=c("black", "green", "red"))
-      legend("bottomright", legend=c("M5-NonCarrier", "P2-NonCarrier", "M5-Carrier", "P2-Carrier"), pch=15, col=c("red", "blue", "black", "green"))
-      # legend("bottomright", legend=c("M5-NonCarrier", "P2-Carrier"), pch=15, col=c("black","red"))
-    } else if(allSample == "blood"){
-      plotMDS(forDgeData, labels=1:32, col=as.numeric(as.factor(forDgeData$sample$group)), main="MDS plot vaccines pilot Blood (Excluding Exp. Carriers)") # Only Experimental Indivs
-      legend("topright", legend=c("M5-NonCarrier", "P2-NonCarrier", "M5-Carrier", "P2-Carrier"), pch=15, col=c("red", "blue", "black", "green"))
-      # legend("bottomright", legend=c("M5-NonCarrier", "P2-NonCarrier", "P2-Carrier"), pch=15, col=c("black", "green", "red"))
-      # legend("bottomright", legend=c("M5-NonCarrier", "P2-Carrier"), pch=15, col=c("black","red"))
+      if (plots){
+        if(allSample == "nasal") {
+          plotMDS(forDgeData, labels=1:24, col=as.numeric(as.factor(forDgeData$sample$group)), main="MDS plot vaccines pilot Nasal (Excluding Exp. Carriers)") #Excluding Nat. Carriers #Only Exp. Indvs
+          # legend("topleft", legend=c("M5-NonCarrier", "P2-NonCarrier", "P2-Carrier"), pch=15, col=c("black", "green", "red"))
+          legend("bottomright", legend=c("M5-NonCarrier", "P2-NonCarrier", "M5-Carrier", "P2-Carrier"), pch=15, col=c("red", "blue", "black", "green"))
+          # legend("bottomright", legend=c("M5-NonCarrier", "P2-Carrier"), pch=15, col=c("black","red"))
+      } else if(allSample == "blood"){
+          plotMDS(forDgeData, labels=1:32, col=as.numeric(as.factor(forDgeData$sample$group)), main="MDS plot vaccines pilot Blood (Excluding Exp. Carriers)") # Only Experimental Indivs
+          legend("topright", legend=c("M5-NonCarrier", "P2-NonCarrier", "M5-Carrier", "P2-Carrier"), pch=15, col=c("red", "blue", "black", "green"))
+          # legend("bottomright", legend=c("M5-NonCarrier", "P2-NonCarrier", "P2-Carrier"), pch=15, col=c("black", "green", "red"))
+          # legend("bottomright", legend=c("M5-NonCarrier", "P2-Carrier"), pch=15, col=c("black","red"))
+        }
       }
     }
 
@@ -377,16 +380,22 @@ if (CountToRemove > 0 ){
   forDgeData.ebayes.df = toptable(forDgeData.ebayes, coef="CarrierStatusAllNonCarrier", n=Inf )
   # forDgeData.ebayes.df = toptable(forDgeData.ebayes, coef="CarrierStatusNaturalNonCarrier", n=Inf )
   # forDgeData.ebayes.df = toptable(forDgeData.ebayes, coef="CarrierStatusExperimentalNonCarrier", n=Inf )
-  forDgeData.ebayes.df$genes = rownames(forDgeData.ebayes.df)
-  forDgeData.ebayes.AverExp = data.frame(AverLogExp=forDgeData.ebayes$Amean, genes=names(forDgeData.ebayes$Amean))
-  forDgeData.ebayes.df.tmp = merge(forDgeData.ebayes.AverExp, forDgeData.ebayes.df, by="genes")
-  p = ggplot(forDgeData.ebayes.df.tmp, aes(AverLogExp, logFC, colour=(adj.P.Val <= 0.05))) + geom_point() + theme(legend.position="none")
-  print(p)
-  # qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="ConditionPlus2")$P.Value, outplots)
-  qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="CarrierStatusAllNonCarrier")$P.Value, outplots)
-  # qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="CarrierStatusNaturalNonCarrier")$P.Value, outplots)
-  # qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="CarrierStatusExperimentalNonCarrier")$P.Value, outplots)
-  dev.off()
+
+  if (plots){
+    forDgeData.ebayes.df$genes = rownames(forDgeData.ebayes.df)
+    forDgeData.ebayes.AverExp = data.frame(AverLogExp=forDgeData.ebayes$Amean, genes=names(forDgeData.ebayes$Amean))
+    forDgeData.ebayes.df.tmp = merge(forDgeData.ebayes.AverExp, forDgeData.ebayes.df, by="genes")
+    p = ggplot(forDgeData.ebayes.df.tmp, aes(AverLogExp, logFC, colour=(adj.P.Val <= 0.05))) + geom_point() + theme(legend.position="none")
+    print(p)
+    # qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="ConditionPlus2")$P.Value, outplots)
+    qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="CarrierStatusAllNonCarrier")$P.Value, outplots)
+    # qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="CarrierStatusNaturalNonCarrier")$P.Value, outplots)
+    # qqplotFunction(toptable(forDgeData.ebayes, n=Inf, coef="CarrierStatusExperimentalNonCarrier")$P.Value, outplots)
+    dev.off()
+  } else {
+      print("Just a remainder that was Not-Plotting process")
+  }
+
   return(forDgeData.ebayes.df)
 
     # forDgeData <- voom(forDgeData, designMatrix, plot=TRUE,  lib.size=colSums(counts)*nf$samples$norm.factors)
@@ -588,7 +597,9 @@ if (module == "tximport"){
 
 } else if (module == "dgeAnalysis"){
 
-  dgeAnalysisTemp = dgeAnalysis(dataFromTxImportData=dataFromTxImportData, 
+  # This is in construction:
+  # ToDo: Make the module to recognice if "dataFromTxImportData" its an tximport object or a matrix with counts. A couple of lines should be added
+    dgeAnalysisTemp = dgeAnalysis(dataFromTxImportData=dataFromTxImportData, 
               pathTosampleFile=pathTosampleFile, 
               offset=offset, 
               cpmToFilter=cpmToFilter, 
@@ -612,21 +623,21 @@ if (module == "tximport"){
                typeOfTranscript=typeOfTranscript, 
                t2g=t2g)
 
-  dgeAnalysis(dataFromTxImportData=txDataTemp, 
+  dgeAnalysisTemp = dgeImportData(dataFromTxImportData=txDataTemp, 
               pathTosampleFile=pathTosampleFile, 
               offset=offset, 
-              cpmToFilter=cpmToFilter, 
               samplesToFilter=samplesToFilter, 
               package=package, 
               CountToRemove=0, 
               meanCounts=0, 
               outplots=NULL, 
               method=method, 
-              rounds = 1, 
+              rounds = rounds, 
               contrast=FALSE, 
               onlyVoom=FALSE, 
               plots=FALSE, 
-              allSample="all")
+              allSample=allSample,
+              cpmToFilter=cpmToFilter)
 
   write.table(dgeAnalysisTemp, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
 }
