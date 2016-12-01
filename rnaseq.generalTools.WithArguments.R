@@ -11,7 +11,7 @@
 # typeOfTranscript="kallisto/salmon" 
 # t2g="transcript2geneFile" 
 # output="outputFile"
-#R CMD BATCH --vanilla '--args module="tximport" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest"' ~/001_Projects/ToolBox/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.Rout
+#R CMD BATCH --vanilla '--args module="tximport" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest" typeMatrix="c(counts, tpm, rpkm)"' ~/001_Projects/ToolBox/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.Rout
 
 # usage for dgeAnalysis:
 # /software/R-3.3.0/bin/R CMD BATCH --vanilla '--args '
@@ -593,7 +593,21 @@ if (module == "tximport"){
 
   print(head(txDatatemp$counts))
 
-  write.table(txDatatemp$counts, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
+  if (typeMatrix == "counts"){
+
+    write.table(txDatatemp$counts, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
+
+  } else if (typeMatrix == "tpm"){
+
+    write.table(txDatatemp$abundance, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
+
+  } else if (typeMatrix == "rpkm"){
+
+    txDatatemp.rpkm = rpkm(txDatatemp$counts, gene.length=txDatatemp$length, normalized.lib.sizes=TRUE, log=FALSE, prior.count=0.25)
+    write.table(txDatatemp.rpkm, file=output, col.names=TRUE, row.names=TRUE, quote=FALSE, sep='\t')
+  }
+
+  
 
 } else if (module == "dgeAnalysis"){
 
