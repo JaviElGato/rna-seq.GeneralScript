@@ -10,6 +10,7 @@
 # pathTosampleFile="listOfSamples" 
 # typeOfTranscript="kallisto/salmon" 
 # t2g="transcript2geneFile" 
+#typeMatrix=c(counts, tpm, rpkm)
 # output="outputFile"
 #R CMD BATCH --vanilla '--args module="tximport" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest" typeMatrix="c(counts, tpm, rpkm)"' ~/001_Projects/ToolBox/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.Rout
 
