@@ -14,6 +14,14 @@
 # output="outputFile"
 #R CMD BATCH --vanilla '--args module="tximport" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest" typeMatrix="c(counts, tpm, rpkm)"' ~/001_Projects/ToolBox/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.Rout
 
+## TO TAKE INTO ACCOUNT 1:
+# The list with samples used for "pathTosampleFile" should have a header. 
+# If your reads are from Kallisto, add header: Sample_ID2.
+# If your reads are from Salmon, add header: Sample_ID1.
+
+## TO TAKE INTO ACCOUNT 2:
+#The list of transcripts and genes use in "t2g" should have 2 columns separated by a single space and a header (Doesn' matter which). The order should be Transcripts Genes
+
 # usage for dgeAnalysis:
 # /software/R-3.3.0/bin/R CMD BATCH --vanilla '--args '
 # module="dgeAnalysis"
