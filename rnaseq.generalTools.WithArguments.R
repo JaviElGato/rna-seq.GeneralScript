@@ -12,7 +12,7 @@
 # t2g="transcript2geneFile" 
 #typeMatrix=c(counts, tpm, rpkm)
 # output="outputFile"
-#R CMD BATCH --vanilla '--args module="tximport" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest" typeMatrix="c(counts, tpm, rpkm)"' ~/001_Projects/ToolBox/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.Rout
+#R CMD BATCH --vanilla '--args module="tximport" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest" typeMatrix="c(counts, tpm, rpkm)"' /lustre/scratch113/teams/anderson/users/jga/ToolBox/RNA_tools/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.Rout
 
 ## TO TAKE INTO ACCOUNT 1:
 # The list with samples used for "pathTosampleFile" should have a header. 
@@ -41,7 +41,7 @@
 # plots=FALSE
 # allSample="all"
 # output="outputFile"
-#R CMD BATCH --vanilla '--args module="importAndAnalysis" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest.dgeAnal" method="ls" package="limma" plots="FALSE" allSample="nasal" offset="none" rounds=1 cpmToFilter=5 samplesToFilter=4' ~/001_Projects/ToolBox/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.dgeAnal.Rout
+#R CMD BATCH --vanilla '--args module="importAndAnalysis" pathToDir="/Users/jga/001_Projects/Project3_LAIV_RNAseq/salmon.rel85.nasal.ExcludeExperimentalCarriers/" pathTosampleFile="../listSeqFiles.MasterFile.nasal.ExcludeExperimentalCarriers" typeOfTranscript="salmon" t2g="../transcript2gene.GRCh38.rel85.Modif.Transc_GeneEns.txt" output="txDataTest.dgeAnal" method="ls" package="limma" plots="FALSE" allSample="nasal" offset="none" rounds=1 cpmToFilter=5 samplesToFilter=4' /lustre/scratch113/teams/anderson/users/jga/ToolBox/RNA_tools/rna-seq.GeneralScript/rnaseq.generalTools.WithArguments.R rnaseq.generalTools.WithArguments.dgeAnal.Rout
 
 library(ggplot2)
 library(batch)
